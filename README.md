@@ -1,1 +1,370 @@
 # Rialo
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>RIALO Catcher – Updated</title>
+<style>
+    :root{
+        --cream:#f5f0e1; --black:#000000; --green:#4CAF50; --red:#f44336; --gold:#FFD700;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;user-select:none;}
+    body{
+        width:100vw;height:100vh;background:var(--black);color:var(--cream);
+        font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;overflow:hidden;
+        display:flex;justify-content:center;align-items:center;
+    }
+    #game-container{
+        position:relative;width:100%;height:100%;max-width:600px;max-height:900px;
+        background:#050505;overflow:hidden;border:1px solid #222;
+    }
+    #player{
+        position:absolute;width:60px;height:60px;z-index:10;pointer-events:none;
+        display:flex;justify-content:center;align-items:center;transition:transform .1s ease-out;
+    }
+    .logo-container{width:100%;height:100%;display:flex;justify-content:center;align-items:center;}
+    .custom-image{width:100%;height:100%;object-fit:contain;border-radius:8px;}
+    .item{
+        position:absolute;width:25px;height:25px;border-radius:50%;
+        display:flex;justify-content:center;align-items:center;font-size:14px;
+    }
+    .good{background:var(--green);box-shadow:0 0 15px var(--green);}
+    .bad{background:var(--red);box-shadow:0 0 15px var(--red);}
+    .bonus{background:var(--gold);box-shadow:0 0 20px var(--gold);animation:pulse .6s infinite;}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+    .screen{
+        position:absolute;top:0;left:0;width:100%;height:100%;
+        background:rgba(0,0,0,.9);display:flex;flex-direction:column;
+        justify-content:center;align-items:center;z-index:100;text-align:center;padding:20px;
+    }
+    .hidden{display:none !important;}
+    h1{font-size:2.5rem;margin-bottom:10px;letter-spacing:2px;}
+    p{margin-bottom:25px;opacity:.8;}
+    .stats-bar{
+        position:absolute;top:0;left:0;width:100%;padding:15px;
+        display:flex;justify-content:space-between;font-weight:bold;font-size:1.1rem;
+        z-index:50;background:linear-gradient(to bottom,rgba(0,0,0,.8),transparent);
+    }
+    .timer{color:var(--gold);font-size:1.3rem;}
+    .timer.warning{color:var(--red);animation:pulse .5s infinite;}
+    .btn{
+        background:var(--cream);color:var(--black);border:none;padding:12px 30px;
+        font-size:1rem;font-weight:bold;border-radius:50px;cursor:pointer;margin:5px;
+        transition:transform .2s,background .2s;
+    }
+    .btn:hover{transform:scale(1.05);background:#fff;}
+    .btn-secondary{
+        background:transparent;color:var(--cream);border:1px solid var(--cream);
+    }
+    .credit{margin-top:40px;font-size:.8rem;opacity:.5;letter-spacing:3px;}
+    .particle{
+        position:absolute;pointer-events:none;border-radius:50%;
+    }
+    /* UI thêm cho level & logo */
+    .options{
+        margin-top:20px;display:flex;flex-direction:column;align-items:center;gap:10px;
+    }
+    .level-select{
+        display:flex;gap:8px;
+    }
+    .level-select button{
+        background:transparent;color:var(--cream);border:1px solid var(--cream);
+        padding:6px 12px;border-radius:8px;cursor:pointer;
+    }
+    .level-select button.active{
+        background:var(--cream);color:var(--black);
+    }
+    .logo-chooser{
+        display:flex;gap:8px;
+    }
+    .logo-chooser img{
+        width:50px;height:50px;object-fit:contain;border:2px solid transparent;
+        cursor:pointer;border-radius:6px;
+    }
+    .logo-chooser img.selected{
+        border-color:var(--gold);
+    }
+</style>
+</head>
+<body>
+<div id="game-container">
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div>SCORE: <span id="score-val">0</span></div>
+        <div class="timer">TIME: <span id="time-val">30</span>s</div>
+        <div>LIVES: <span id="lives-val">3</span></div>
+    </div>
+
+    <!-- Player -->
+    <div id="player">
+        <div class="logo-container" id="logo-holder">
+            <img id="player-logo" class="custom-image" alt="logo">
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen">
+        <div id="start-logo" style="width:80px;height:80px;margin-bottom:20px;">
+            <img id="start-logo-img" class="custom-image" alt="logo">
+        </div>
+        <h1>RIALO</h1>
+        <p>Catch green and gold. Avoid red.</p>
+        <p style="color:var(--gold);">⏱️ Time Limit: 30 seconds</p>
+
+        <!-- Level selector -->
+        <div class="options">
+            <div class="level-select" id="level-select">
+                <button data-level="0" class="active">Easy</button>
+                <button data-level="1">Normal</button>
+                <button data-level="2">Hard</button>
+                <button data-level="3">Insane</button>
+            </div>
+
+            <!-- Logo chooser -->
+            <div class="logo-chooser" id="logo-chooser">
+                <img src="https://cdn.prod.website-files.com/6883572e6ebf68cfe676dd65/6883572e6ebf68cfe676ddf5_Group%2014451.svg" data-index="0" class="selected">
+                <img src="https://cdn.prod.website-files.com/6883572e6ebf68cfe676dd65/6883572e6ebf68cfe676ddf4_Group%2014450.svg" data-index="1">
+                <img src="https://cdn.prod.website-files.com/6883572e6ebf68cfe676dd65/6883572e6ebf68cfe676ddf8_Group%2014449.svg" data-index="2">
+            </div>
+        </div>
+
+        <button class="btn" onclick="startGame()">START GAME</button>
+        <div class="credit">RIALO.IO</div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="screen hidden">
+        <h1 id="game-over-title">GAME OVER</h1>
+        <p id="game-over-reason">Final Score</p>
+        <h2 id="final-score" style="font-size:3rem;color:var(--gold);margin-bottom:30px;">0</h2>
+        <button class="btn" onclick="startGame()">TRY AGAIN</button>
+        <button class="btn btn-secondary" onclick="showStart()">MENU</button>
+    </div>
+</div>
+
+<audio id="bg-music" loop>
+    <!-- Một bài nhạc royalty‑free mẫu, bạn có thể thay URL này bằng bất kỳ file MP3 nào -->
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_6f0c2e3c69.mp3?filename=summer-124837.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+/* ---------- Cấu hình chung ---------- */
+const container   = document.getElementById('game-container');
+const player      = document.getElementById('player');
+const scoreEl     = document.getElementById('score-val');
+const timeEl      = document.getElementById('time-val');
+const timerEl     = document.querySelector('.timer');
+const livesEl     = document.getElementById('lives-val');
+const startScreen = document.getElementById('start-screen');
+const gameOverScreen = document.getElementById('game-over-screen');
+const finalScoreEl = document.getElementById('final-score');
+const gameOverTitle = document.getElementById('game-over-title');
+const gameOverReason = document.getElementById('game-over-reason');
+const music = document.getElementById('bg-music');
+
+let score = 0, lives = 3, timeLeft = 30, isPlaying = false;
+let items = [], playerX = 0, playerY = 0, targetX = 0, targetY = 0;
+let animationId, spawnTimer, gameTimer;
+let currentLevel = 0;   // 0‑Easy, 1‑Normal, 2‑Hard, 3‑Insane
+let logoUrls = [
+    'https://cdn.prod.website-files.com/6883572e6ebf68cfe676dd65/6883572e6ebf68cfe676ddf5_Group%2014451.svg',
+    'https://cdn.prod.website-files.com/6883572e6ebf68cfe676dd65/6883572e6ebf68cfe676ddf4_Group%2014450.svg',
+    'https://cdn.prod.website-files.com/6883572e6ebf68cfe676dd65/6883572e6ebf68cfe676ddf8_Group%2014449.svg'
+];
+let currentLogo = 0;
+
+/* ---------- Đặt logo mặc định ---------- */
+window.onload = () => {
+    setLogo(0);
+};
+
+/* ---------- Hàm thay đổi logo ---------- */
+function setLogo(idx){
+    const url = logoUrls[idx];
+    document.getElementById('player-logo').src = url;
+    document.getElementById('start-logo-img').src = url;
+    currentLogo = idx;
+    // cập nhật UI chọn logo
+    document.querySelectorAll('#logo-chooser img').forEach(img=>{
+        img.classList.toggle('selected', parseInt(img.dataset.index)===idx);
+    });
+}
+
+/* ---------- Chọn level ---------- */
+document.getElementById('level-select').addEventListener('click', e=>{
+    if(e.target.tagName!=='BUTTON') return;
+    document.querySelectorAll('#level-select button').forEach(btn=>btn.classList.remove('active'));
+    e.target.classList.add('active');
+    currentLevel = parseInt(e.target.dataset.level);
+});
+
+/* ---------- Đổi logo khi nhấp vào thumbnail ---------- */
+document.getElementById('logo-chooser').addEventListener('click', e=>{
+    if(e.target.tagName!=='IMG') return;
+    setLogo(parseInt(e.target.dataset.index));
+});
+
+/* ---------- Điều khiển di chuyển ---------- */
+function handleInput(e){
+    if(!isPlaying) return;
+    const rect = container.getBoundingClientRect();
+    let x,y;
+    if(e.touches){
+        x = e.touches[0].clientX - rect.left;
+        y = e.touches[0].clientY - rect.top;
+    }else{
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
+    }
+    targetX = x - 30;
+    targetY = y - 30;
+}
+container.addEventListener('mousemove',handleInput);
+container.addEventListener('touchmove',e=>{e.preventDefault();handleInput(e);},{passive:false});
+
+/* ---------- Tạo vật phẩm ---------- */
+function spawnItem(){
+    if(!isPlaying) return;
+    const item = document.createElement('div');
+    const r = Math.random();
+    let type='good';
+    if(r<0.2) type='bad';
+    else if(r<0.3) type='bonus';
+    item.className=`item ${type}`;
+    item.innerHTML = type==='bonus'?'⭐':'';
+    item.style.left = Math.random()*(container.clientWidth-30)+'px';
+    item.style.top = '-40px';
+
+    // tốc độ dựa trên level và điểm
+    const baseSpeed = [3,4,5,6][currentLevel];
+    const speed = baseSpeed + Math.random()*2 + (score/200);
+    container.appendChild(item);
+    items.push({el:item,type,speed,y:-40});
+
+    // thời gian spawn giảm dần khi level cao
+    const minDelay = [800,600,400,250][currentLevel];
+    spawnTimer = setTimeout(spawnItem, Math.max(200, minDelay - score/5));
+}
+
+/* ---------- Hiệu ứng hạt ---------- */
+function createParticles(x,y,color){
+    for(let i=0;i<6;i++){
+        const p=document.createElement('div');
+        p.className='particle';
+        p.style.width='6px';p.style.height='6px';p.style.background=color;
+        p.style.left=x+'px';p.style.top=y+'px';
+        container.appendChild(p);
+        const angle=Math.random()*Math.PI*2;
+        const dist=20+Math.random()*30;
+        p.animate([
+            {transform:'translate(0,0) scale(1)',opacity:1},
+            {transform:`translate(${Math.cos(angle)*dist}px,${Math.sin(angle)*dist}px) scale(0)`,opacity:0}
+        ],{duration:500,easing:'ease-out'}).onfinish=()=>p.remove();
+    }
+}
+
+/* ---------- Vòng lặp cập nhật ---------- */
+function update(){
+    if(!isPlaying) return;
+    playerX += (targetX-playerX)*0.15;
+    playerY += (targetY-playerY)*0.15;
+    player.style.left=`${playerX}px`;
+    player.style.top=`${playerY}px`;
+
+    for(let i=items.length-1;i>=0;i--){
+        const it=items[i];
+        it.y+=it.speed;
+        it.el.style.top=`${it.y}px`;
+
+        const dx=(playerX+30)-(parseFloat(it.el.style.left)+12.5);
+        const dy=(playerY+30)-(it.y+12.5);
+        const dist=Math.hypot(dx,dy);
+
+        if(dist<35){
+            if(it.type==='good'){
+                score+=10;createParticles(playerX+30,playerY+30,'var(--green)');
+            }else if(it.type==='bonus'){
+                score+=50;createParticles(playerX+30,playerY+30,'var(--gold)');
+            }else{
+                lives--;createParticles(playerX+30,playerY+30,'var(--red)');
+                container.style.boxShadow='inset 0 0 50px rgba(255,0,0,0.5)';
+                setTimeout(()=>container.style.boxShadow='none',200);
+            }
+            scoreEl.textContent=score;
+            livesEl.textContent=lives;
+            it.el.remove();
+            items.splice(i,1);
+            if(lives<=0){ endGame(false); return; }
+            continue;
+        }
+
+        if(it.y>container.clientHeight){
+            it.el.remove();
+            items.splice(i,1);
+        }
+    }
+    animationId=requestAnimationFrame(update);
+}
+
+/* ---------- Bắt đầu game ---------- */
+function startGame(){
+    score=0;lives=3;timeLeft=30;
+    items.forEach(i=>i.el.remove());items=[];
+    scoreEl.textContent=score;
+    livesEl.textContent=lives;
+    timeEl.textContent=timeLeft;
+    timerEl.classList.remove('warning');
+
+    playerX=container.clientWidth/2-30;
+    playerY=container.clientHeight-150;
+    targetX=playerX;targetY=playerY;
+
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    isPlaying=true;
+
+    clearTimeout(spawnTimer);
+    clearInterval(gameTimer);
+    spawnItem();
+    update();
+
+    // bật nhạc
+    music.currentTime=0;
+    music.play();
+
+    // đếm ngược
+    gameTimer=setInterval(()=>{
+        timeLeft--;
+        timeEl.textContent=timeLeft;
+        if(timeLeft<=5) timerEl.classList.add('warning');
+        if(timeLeft<=0) endGame(true);
+    },1000);
+}
+
+/* ---------- Kết thúc game ---------- */
+function endGame(byTime){
+    isPlaying=false;
+    cancelAnimationFrame(animationId);
+    clearTimeout(spawnTimer);
+    clearInterval(gameTimer);
+    music.pause();
+
+    finalScoreEl.textContent=score;
+    if(byTime){
+        gameOverTitle.textContent="TIME'S UP!";
+        gameOverReason.textContent="Time's Up! Final Score";
+    }else{
+        gameOverTitle.textContent="GAME OVER";
+        gameOverReason.textContent="Final Score";
+    }
+    gameOverScreen.classList.remove('hidden');
+}
+
+/* ---------- Trở về menu ---------- */
+function showStart(){
+    gameOverScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+}
+</script>
+</body>
+</html>
